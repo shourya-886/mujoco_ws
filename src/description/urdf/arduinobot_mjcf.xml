@@ -23,7 +23,7 @@
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
 
     <geom pos="-0.5 -0.5 0" quat="1 0 0 0" type="mesh" mesh="basement"/>
-    <body name="base_plate" pos="0 0 0.307">
+    <body name="base_plate" pos="0 0 0.304">
       <inertial pos="0.0374568 0.0391323 0.0686462" quat="-0.263343 0.742225 -0.0620609 0.613107" mass="0.0545311" diaginertia="3.36311e-05 2.67876e-05 2.20813e-05"/>
       <joint name="joint_1" pos="0 0 0" axis="0 0 1" range="-1.5708 1.5708" actuatorfrcrange="-30 30"/>
       <geom pos="-0.39 -0.39 -0.56" quat="1 0 0 0" type="mesh" mesh="base_plate"/>
@@ -62,16 +62,16 @@
         polycoef="0 -1 0 0 0"/>
   </equality>
 
-  <!-- TowerPro SG90 at 4.8 V: 1.8 kg-cm = 0.1765 N-m stall torque. -->
+  <!-- Temporary test limit: ±2.0 N-m. This exceeds a real SG90's ±0.1765 N-m rating. -->
   <actuator>
     <position name="servo_joint_1" joint="joint_1" kp="5" dampratio="1" timeconst="0.02"
-              ctrlrange="-1.5708 1.5708" forcerange="-0.1765 0.1765"/>
+              ctrlrange="-1.5708 1.5708" forcerange="-2 2"/>
     <position name="servo_joint_2" joint="joint_2" kp="5" dampratio="1" timeconst="0.02"
-              ctrlrange="-1.5708 1.5708" forcerange="-0.1765 0.1765"/>
+              ctrlrange="-1.5708 1.5708" forcerange="-2 2"/>
     <position name="servo_joint_3" joint="joint_3" kp="5" dampratio="1" timeconst="0.02"
-              ctrlrange="-1.5708 1.5708" forcerange="-0.1765 0.1765"/>
+              ctrlrange="-1.5708 1.5708" forcerange="-2 2"/>
     <!-- Drive one jaw only; gripper_gear moves joint_5 in the opposite direction. -->
     <position name="servo_gripper" joint="joint_4" kp="5" dampratio="1" timeconst="0.02"
-              ctrlrange="-1.5708 0" forcerange="-0.1765 0.1765"/>
+              ctrlrange="-1.5708 0" forcerange="-2 2"/>
   </actuator>
 </mujoco>

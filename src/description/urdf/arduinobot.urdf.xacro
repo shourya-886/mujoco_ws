@@ -8,10 +8,10 @@
     <xacro:arg name="is_sim" default="true"/>
 
     <!-- Include Gazebo Parameters -->
-    <xacro:include filename="$(find arduinobot_description)/urdf/arduinobot_gazebo.xacro" />
+    <xacro:include filename="$(find description)/urdf/arduinobot_gazebo.xacro" />
 
     <!-- Include ros2_control Plugins -->
-    <xacro:include filename="$(find arduinobot_description)/urdf/arduinobot_ros2_control.xacro" />
+    <xacro:include filename="$(find description)/urdf/arduinobot_ros2_control.xacro" />
     
     <!-- Useful XACRO Variables (Properties) -->
     <xacro:property name="PI" value="3.14159265359" />
@@ -32,13 +32,13 @@
         <visual>
             <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/basement.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/basement.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </visual>
         <collision>
             <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/basement.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/basement.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </collision>
     </link>
@@ -54,13 +54,13 @@
         <visual>
             <origin rpy="0 0 0" xyz="-0.39 -0.39 -0.56"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/base_plate.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/base_plate.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </visual>
         <collision>
             <origin rpy="0 0 0" xyz="-0.39 -0.39 -0.56"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/base_plate.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/base_plate.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </collision>
     </link>
@@ -76,13 +76,13 @@
         <visual>
             <origin rpy=" 0 -${PI / 2} ${PI / 2}" xyz="0.19 0.06 -0.08"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/forward_drive_arm.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/forward_drive_arm.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </visual>
         <collision>
             <origin rpy=" 0 -${PI / 2} ${PI / 2}" xyz="0.19 0.06 -0.08"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/forward_drive_arm.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/forward_drive_arm.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </collision>
     </link>
@@ -98,13 +98,13 @@
         <visual>
             <origin rpy="${PI / 2} 0 ${PI / 2}" xyz="-0.03 -0.4 -0.06"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/horizontal_arm.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/horizontal_arm.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </visual>
         <collision>
             <origin rpy="${PI / 2} 0 ${PI / 2}" xyz="-0.03 -0.4 -0.06"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/horizontal_arm.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/horizontal_arm.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </collision>
     </link>
@@ -120,13 +120,13 @@
         <visual>
             <origin rpy="0 0 ${PI / 2}" xyz="0 -0.05 -0.15"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/claw_support.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/claw_support.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </visual>
         <collision>
             <origin rpy="0 0 ${PI / 2}" xyz="0 -0.05 -0.15"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/claw_support.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/claw_support.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </collision>
     </link>
@@ -142,13 +142,13 @@
         <visual>
             <origin rpy="0 0 -${PI / 2}" xyz="-0.1 0.50 -0.1"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/right_finger.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/right_finger.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </visual>
         <collision>
             <origin rpy="0 0 -${PI / 2}" xyz="-0.1 0.50 -0.1"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/right_finger.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/right_finger.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </collision>
     </link>
@@ -164,13 +164,13 @@
         <visual>
             <origin rpy="0 0 -${PI / 2}" xyz="-0.04 0.50 -0.1"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/left_finger.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/left_finger.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </visual>
         <collision>
             <origin rpy="0 0 -${PI / 2}" xyz="-0.04 0.50 -0.1"/>
             <geometry>
-                <mesh filename="package://arduinobot_description/meshes/left_finger.STL" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://description/meshes/left_finger.STL" scale="0.01 0.01 0.01"/>
             </geometry>
         </collision>
     </link>

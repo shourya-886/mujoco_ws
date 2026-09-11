@@ -1,0 +1,238 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="arduinobot">
+
+    <!-- Start GZ or Ignition depending on ROS 2 Version -->
+    <xacro:arg name="is_ignition" default="true"/>
+
+    <!-- Load Simulated or Real Hardware Interfaces -->
+    <xacro:arg name="is_sim" default="true"/>
+
+    <!-- Include Gazebo Parameters -->
+    <xacro:include filename="$(find arduinobot_description)/urdf/arduinobot_gazebo.xacro" />
+
+    <!-- Include ros2_control Plugins -->
+    <xacro:include filename="$(find arduinobot_description)/urdf/arduinobot_ros2_control.xacro" />
+    
+    <!-- Useful XACRO Variables (Properties) -->
+    <xacro:property name="PI" value="3.14159265359" />
+    <xacro:property name="effort" value="30.0" />
+    <xacro:property name="velocity" value="10.0" />
+
+    <!-- Links -->
+    <link name="world"/>
+
+    <link name="base_link">
+        <inertial>
+            <origin xyz="0.047813751 0.050114205 0.011410979" rpy="0 0 0"/>
+            <mass value="0.053288777" />
+            <inertia ixx="3.37E-05" ixy="3.35E-09" ixz="-4.41E-10"
+                     iyy="3.12E-05" iyz="9.25E-08"
+                     izz="5.65E-05" />
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/basement.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/basement.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="base_plate">
+        <inertial>
+            <origin xyz="0.03745683 0.039132251 0.068646169" rpy="0 0 0"/>
+            <mass value="0.054531064" />
+            <inertia ixx="2.30E-05" ixy="-2.08E-06" ixz="1.93E-06"
+                     iyy="2.75E-05" iyz="-2.33E-06"
+                     izz="3.20E-05" />
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="-0.39 -0.39 -0.56"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/base_plate.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="-0.39 -0.39 -0.56"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/base_plate.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="forward_drive_arm">
+        <inertial>
+            <origin xyz="0.041356854 0.015301914 0.006504508" rpy="0 0 0"/>
+            <mass value="0.016329173" />
+            <inertia ixx="1.29E-06" ixy="-1.85E-07" ixz="-3.52E-07"
+                     iyy="1.17E-05" iyz="5.31E-09"
+                     izz="1.25E-05" />
+        </inertial>
+        <visual>
+            <origin rpy=" 0 -${PI / 2} ${PI / 2}" xyz="0.19 0.06 -0.08"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/forward_drive_arm.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy=" 0 -${PI / 2} ${PI / 2}" xyz="0.19 0.06 -0.08"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/forward_drive_arm.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="horizontal_arm">
+        <inertial>
+            <origin xyz="0.05942601 0.007996574 0.00404" rpy="0 0 0"/>
+            <mass value="0.01094525" />
+            <inertia ixx="2.38E-07" ixy="-1.58E-07" ixz="5.44E-14"
+                     iyy="1.49E-05" iyz="-4.00E-14"
+                     izz="1.50E-05" />
+        </inertial>
+        <visual>
+            <origin rpy="${PI / 2} 0 ${PI / 2}" xyz="-0.03 -0.4 -0.06"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/horizontal_arm.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="${PI / 2} 0 ${PI / 2}" xyz="-0.03 -0.4 -0.06"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/horizontal_arm.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="claw_support">
+        <inertial>
+            <origin xyz="0.019393395 0.011560624 0.010132371" rpy="0 0 0"/>
+            <mass value="0.008336755" />
+            <inertia ixx="1.39E-06" ixy="5.05E-08" ixz="-4.60E-07"
+                     iyy="2.82E-06" iyz="-1.60E-07"
+                     izz="2.19E-06" />
+        </inertial>
+        <visual>
+            <origin rpy="0 0 ${PI / 2}" xyz="0 -0.05 -0.15"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/claw_support.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="0 0 ${PI / 2}" xyz="0 -0.05 -0.15"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/claw_support.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="gripper_right">
+        <inertial>
+            <origin xyz="0.029137181 0.008193029 0.002098195" rpy="0 0 0"/>
+            <mass value="0.001830792" />
+            <inertia ixx="2.98E-08" ixy="3.93E-08" ixz="-2.07E-08"
+                     iyy="5.41E-07" iyz="-4.79E-09"
+                     izz="5.60E-07" />
+        </inertial>
+        <visual>
+            <origin rpy="0 0 -${PI / 2}" xyz="-0.1 0.50 -0.1"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/right_finger.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="0 0 -${PI / 2}" xyz="-0.1 0.50 -0.1"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/right_finger.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="gripper_left">
+        <inertial>
+            <origin xyz="0.028124305 0.006099151 0.002138814" rpy="0 0 0"/>
+            <mass value="0.001736879" />
+            <inertia ixx="2.87E-08" ixy="-3.36E-08" ixz="-1.93E-08"
+                     iyy="5.03E-07" iyz="4.60E-09"
+                     izz="5.20E-07" />
+        </inertial>
+        <visual>
+            <origin rpy="0 0 -${PI / 2}" xyz="-0.04 0.50 -0.1"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/left_finger.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin rpy="0 0 -${PI / 2}" xyz="-0.04 0.50 -0.1"/>
+            <geometry>
+                <mesh filename="package://arduinobot_description/meshes/left_finger.STL" scale="0.01 0.01 0.01"/>
+            </geometry>
+        </collision>
+    </link>
+
+    
+    <!-- Joints -->  
+    <joint name="virtual_joint" type="fixed">
+        <parent link="world"/>
+        <child link="base_link"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint> 
+
+    <joint name ="joint_1" type="revolute">
+        <parent link="base_link"/>
+        <child link = "base_plate"/>
+        <origin xyz="0 0 0.307"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-${PI / 2}" upper="${PI / 2}" 
+               effort="${effort}" velocity="${velocity}"/>
+    </joint>
+
+    <joint name ="joint_2" type="revolute">
+        <parent link="base_plate"/>
+        <child link = "forward_drive_arm"/>
+        <origin xyz="-0.02 0 0.35"/>
+        <axis xyz="1 0 0"/>
+        <limit lower="-${PI / 2}" upper="${PI / 2}"
+                effort="${effort}" velocity="${velocity}"/>
+    </joint>
+
+    <joint name ="joint_3" type="revolute">
+        <parent link="forward_drive_arm"/>
+        <child link = "horizontal_arm"/>
+        <origin xyz="0 0 0.8"/>
+        <axis xyz="1 0 0"/>
+        <limit lower="-${PI / 2}" upper="${PI / 2}"
+               effort="${effort}" velocity="${velocity}"/>
+    </joint>
+
+    <joint name ="horizontal_arm_to_claw_support" type="fixed">
+        <parent link="horizontal_arm"/>
+        <child link = "claw_support"/>
+        <origin xyz="0 0.82 0"/>
+    </joint>
+
+    <joint name ="joint_4" type="revolute">
+        <parent link="claw_support"/>
+        <child link = "gripper_right"/>
+        <origin xyz="-0.04 0.13 -0.1"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-${PI / 2}" upper="0.0" 
+               effort="${effort}" velocity="${velocity}"/>
+    </joint>
+
+    <joint name ="joint_5" type="revolute">
+        <parent link="claw_support"/>
+        <child link = "gripper_left"/>
+        <origin xyz="-0.22 0.13 -0.1"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="0.0" upper="${PI / 2}" 
+               effort="${effort}" velocity="${velocity}"/>
+        <mimic joint="joint_4" multiplier="-1"/>
+    </joint>
+
+</robot>

@@ -65,13 +65,13 @@
   <!-- Temporary test limit: ±2.0 N-m. This exceeds a real SG90's ±0.1765 N-m rating. -->
   <actuator>
     <position name="servo_joint_1" joint="joint_1" kp="5" dampratio="1" timeconst="0.02"
-              ctrlrange="-1.5708 1.5708" forcerange="-2 2"/>
+              ctrlrange="-1.5708 1.5708" forcerange="-3 3"/>
     <position name="servo_joint_2" joint="joint_2" kp="5" dampratio="1" timeconst="0.02"
-              ctrlrange="-1.5708 1.5708" forcerange="-2 2"/>
+              ctrlrange="-1.5708 1.5708" forcerange="-3 3"/>
     <position name="servo_joint_3" joint="joint_3" kp="5" dampratio="1" timeconst="0.02"
-              ctrlrange="-1.5708 1.5708" forcerange="-2 2"/>
+              ctrlrange="-1.5708 1.5708" forcerange="-3 3"/>
     <!-- Drive one jaw only; gripper_gear moves joint_5 in the opposite direction. -->
     <position name="servo_gripper" joint="joint_4" kp="5" dampratio="1" timeconst="0.02"
-              ctrlrange="-1.5708 0" forcerange="-2 2"/>
+              ctrlrange="-1.5708 0" forcerange="-3 3"/>
   </actuator>
 </mujoco>

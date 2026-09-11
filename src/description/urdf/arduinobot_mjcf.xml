@@ -49,4 +49,10 @@
       </body>
     </body>
   </worldbody>
+  <equality>
+  <joint name="gripper_gear"
+        joint1="joint_5"
+        joint2="joint_4"
+        polycoef="0 -1 0 0 0"/>
+  </equality>
 </mujoco>

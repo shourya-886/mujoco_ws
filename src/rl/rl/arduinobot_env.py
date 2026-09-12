@@ -46,11 +46,30 @@ class ArduinobotEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         mujoco.mj_resetData(self.model, self.data)
+
+        # Guarantee the target is reachable: sample random joint angles within
+        # their real limits, run forward kinematics to see where the gripper
+        # would end up, and place the target there. This is fundamentally more
+        # reliable than picking a Cartesian box, since a 3-DOF serial arm's
+        # workspace is a curved shell, not a box -- a naive box will include
+        # unreachable corners and cripple training.
+        j1_range = self.model.jnt_range[0]
+        j2_range = self.model.jnt_range[1]
+        j3_range = self.model.jnt_range[2]
+
+        sample_qpos = self.data.qpos.copy()
+        sample_qpos[0] = self.np_random.uniform(j1_range[0], j1_range[1])
+        sample_qpos[1] = self.np_random.uniform(j2_range[0], j2_range[1])
+        sample_qpos[2] = self.np_random.uniform(j3_range[0], j3_range[1])
+
+        self.data.qpos[:] = sample_qpos
+        mujoco.mj_forward(self.model, self.data)
+        reachable_point = self.data.site("gripper_tip").xpos.copy()
+
+        # Now reset properly and place the target at that guaranteed-reachable point.
+        mujoco.mj_resetData(self.model, self.data)
         target_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "target")
-        new_pos = self.np_random.uniform(
-            low=[0.0, 0.6, 0.8], high=[0.4, 1.0, 1.4]
-        )
-        self.model.site_pos[target_id] = new_pos
+        self.model.site_pos[target_id] = reachable_point
         mujoco.mj_forward(self.model, self.data)
         self.steps = 0
 

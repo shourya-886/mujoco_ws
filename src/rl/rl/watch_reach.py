@@ -3,90 +3,174 @@ import time
 
 from stable_baselines3 import PPO
 
-from arduinobot_env import ArduinobotEnv
+from arduinobot_env import FurutaPendulumEnv
 
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.abspath(
-    os.path.join(SCRIPT_DIR, "../../../ppo_arduinobot_reach.zip")
+# ================================================================
+# CONFIGURATION
+# ================================================================
+
+MODEL_PATH = os.path.expanduser(
+    "~/mujoco_ws/ppo_furuta_pendulum.zip"
 )
 
+NUM_EPISODES = 10
+
+
+# ================================================================
+# POLICY EVALUATION
+# ================================================================
 
 if __name__ == "__main__":
+
     print("=" * 60)
-    print("ArduinoBot PPO Reaching - Policy Evaluation")
+    print("Furuta Pendulum PPO - Policy Evaluation")
     print("=" * 60)
-    print(f"Loading model: {MODEL_PATH}")
+
+    # ------------------------------------------------------------
+    # Check model
+    # ------------------------------------------------------------
 
     if not os.path.exists(MODEL_PATH):
         raise FileNotFoundError(
-            f"Trained PPO model not found:\n{MODEL_PATH}"
+            f"\nTrained model not found:\n{MODEL_PATH}\n"
+            "\nTrain the policy first using train_reach.py."
         )
 
-    env = ArduinobotEnv(render_mode="human")
+    print(f"Loading model: {MODEL_PATH}")
+
+    # ------------------------------------------------------------
+    # Create environment
+    # ------------------------------------------------------------
+
+    env = FurutaPendulumEnv(
+        render_mode="human"
+    )
+
+    # ------------------------------------------------------------
+    # Load trained PPO policy
+    # ------------------------------------------------------------
+
     model = PPO.load(MODEL_PATH)
 
     print("Model loaded successfully.")
-    print("Starting evaluation...\n")
+    print(f"Observation space: {env.observation_space}")
+    print(f"Action space:      {env.action_space}")
+    print()
+    print("Starting evaluation...")
+    print("=" * 60)
 
-    obs, info = env.reset()
+    try:
 
-    episode = 0
-    successes = 0
-    timeouts = 0
+        for episode in range(NUM_EPISODES):
 
-    episode_min_distance = float("inf")
+            observation, info = env.reset()
 
-    for step in range(5000):
+            episode_reward = 0.0
+            step = 0
 
-        action, _states = model.predict(
-            obs,
-            deterministic=True
-        )
-
-        obs, reward, terminated, truncated, info = env.step(action)
-
-        distance = info.get("distance", float("inf"))
-        episode_min_distance = min(
-            episode_min_distance,
-            distance
-        )
-
-        time.sleep(0.02)
-
-        if terminated or truncated:
-
-            episode += 1
-
-            if terminated:
-                successes += 1
-                result = "SUCCESS"
-            else:
-                timeouts += 1
-                result = "TIMEOUT"
-
+            print()
+            print(f"Episode {episode + 1}/{NUM_EPISODES}")
             print(
-                f"Episode {episode:3d}: "
-                f"{result:7s} | "
-                f"final_distance = {distance:.3f} m | "
-                f"min_distance = {episode_min_distance:.3f} m"
+                f"Initial alpha: {info['alpha']:.4f} rad"
             )
 
-            episode_min_distance = float("inf")
+            while True:
 
-            obs, info = env.reset()
+                # ------------------------------------------------
+                # Run trained policy
+                # ------------------------------------------------
 
-    env.close()
+                action, _states = model.predict(
+                    observation,
+                    deterministic=True
+                )
 
-    total_episodes = successes + timeouts
+                # ------------------------------------------------
+                # Step environment
+                # ------------------------------------------------
 
-    print("\n" + "=" * 60)
-    print("Evaluation complete")
-    print("=" * 60)
-    print(f"Episodes : {total_episodes}")
-    print(f"Successes: {successes}")
-    print(f"Timeouts : {timeouts}")
+                observation, reward, terminated, truncated, info = (
+                    env.step(action)
+                )
 
-    if total_episodes > 0:
-        success_rate = 100.0 * successes / total_episodes
-        print(f"Success rate: {success_rate:.1f}%")
+                episode_reward += reward
+                step += 1
+
+                # ------------------------------------------------
+                # Print status periodically
+                # ------------------------------------------------
+
+                if step % 50 == 0:
+
+                    print(
+                        f"Step {step:04d} | "
+                        f"theta: {info['theta']:+.3f} | "
+                        f"alpha: {info['alpha']:+.3f} | "
+                        f"reward: {reward:+.4f}"
+                    )
+
+                if terminated or truncated:
+
+                    break
+
+                # Small delay so the viewer remains easy to watch.
+                time.sleep(0.002)
+
+            # ----------------------------------------------------
+            # Episode result
+            # ----------------------------------------------------
+
+            if info["fell_over"]:
+                status = "FELL"
+
+            elif info["hit_arm_limit"]:
+                status = "ARM LIMIT"
+
+            elif truncated:
+                status = "TIMEOUT"
+
+            else:
+                status = "ENDED"
+
+            print(
+                f"Episode finished: {status}"
+            )
+
+            print(
+                f"Steps:           {step}"
+            )
+
+            print(
+                f"Episode reward:  {episode_reward:.3f}"
+            )
+
+            print(
+                f"Final theta:     {info['theta']:+.3f} rad"
+            )
+
+            print(
+                f"Final alpha:     {info['alpha']:+.3f} rad"
+            )
+
+            print(
+                f"Upright:         {info['upright']}"
+            )
+
+            # Give the viewer a moment before resetting.
+            time.sleep(1.0)
+
+    except KeyboardInterrupt:
+
+        print()
+        print("Evaluation stopped by user.")
+
+    finally:
+
+        env.close()
+
+        print()
+        print("=" * 60)
+        print("Evaluation finished")
+        print("=" * 60)
+

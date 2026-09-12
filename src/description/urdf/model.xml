@@ -1,6 +1,6 @@
 <mujoco model="inverted_pendulum">
 
-    <compiler angle="radian" meshdir="meshes" />
+    <compiler angle="radian" meshdir="../meshes" />
 
     <option gravity="0 0 -9.81" />
 

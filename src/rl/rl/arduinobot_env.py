@@ -32,7 +32,7 @@ class ArduinobotEnv(gym.Env):
             dtype=np.float32,
         )
 
-        obs_dim = self.model.nq + self.model.nv + 3
+        obs_dim = self.model.nq + self.model.nv + 3 + 1 + 4
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
         )
@@ -41,7 +41,19 @@ class ArduinobotEnv(gym.Env):
         gripper_pos = self.data.site("gripper_tip").xpos
         target_pos = self.data.site("target").xpos
         to_target = target_pos - gripper_pos
-        return np.concatenate([self.data.qpos, self.data.qvel, to_target]).astype(np.float32)
+        distance = np.array([np.linalg.norm(to_target)], dtype=np.float32)
+
+        # Explicit "encoder" values: each actuated joint's position, normalized
+        # roughly to [-1, 1] by its known range, plus raw qpos/qvel for everything.
+        joint_positions = self.data.qpos[:4].copy()  # joint_1..joint_4 (encoders)
+
+        return np.concatenate([
+            self.data.qpos,
+            self.data.qvel,
+            to_target,
+            distance,
+            joint_positions,
+        ]).astype(np.float32)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -80,6 +92,7 @@ class ArduinobotEnv(gym.Env):
 
     def step(self, action):
         action = np.clip(action, self.action_space.low, self.action_space.high)
+        prev_gripper_pos = self.data.site("gripper_tip").xpos.copy()
         self.data.ctrl[:] = action
         mujoco.mj_step(self.model, self.data)
         self.steps += 1
@@ -87,15 +100,21 @@ class ArduinobotEnv(gym.Env):
         gripper_pos = self.data.site("gripper_tip").xpos
         target_pos = self.data.site("target").xpos
         distance = float(np.linalg.norm(gripper_pos - target_pos))
+        prev_distance = float(np.linalg.norm(prev_gripper_pos - target_pos))
 
-        reward = -distance
+        # Dense shaping: reward reducing distance each step, not just being close.
+        progress = prev_distance - distance
+        reward = -distance * 0.1 + progress * 10.0
+
+        # Small control penalty discourages jittery/wasteful motion.
+        reward -= 0.001 * np.sum(np.square(action))
+
         terminated = distance < self.success_threshold
         if terminated:
-            reward += 10.0
+            reward += 20.0
         truncated = self.steps >= self.max_steps
 
         obs = self._get_obs()
-
         if self.render_mode == "human":
             self.render()
 

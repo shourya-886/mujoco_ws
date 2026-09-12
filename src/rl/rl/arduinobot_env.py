@@ -15,7 +15,7 @@ MJCF_PATH = os.path.expanduser(
 class ArduinobotEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 50}
 
-    def __init__(self, render_mode=None, max_steps=200, success_threshold=0.03):
+    def __init__(self, render_mode=None, max_steps=200, success_threshold=0.08):
         self.model = mujoco.MjModel.from_xml_path(MJCF_PATH)
         self.data = mujoco.MjData(self.model)
         self.render_mode = render_mode
@@ -128,7 +128,7 @@ class ArduinobotEnv(gym.Env):
 
         terminated = distance < self.success_threshold
         if terminated:
-            reward += 20.0
+            reward += 50.0
         truncated = self.steps >= self.max_steps
 
         obs = self._get_obs()

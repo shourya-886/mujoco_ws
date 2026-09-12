@@ -1,0 +1,69 @@
+<mujoco model="inverted_pendulum">
+
+    <compiler angle="radian" meshdir="meshes" />
+
+    <option gravity="0 0 -9.81" />
+
+    <default>
+        <joint damping="0.0" />
+    </default>
+
+    <asset>
+        <mesh name="base_mesh" file="base.stl" scale="0.001 0.001 0.001" />
+        <mesh name="lid_mesh" file="lid.stl" scale="0.001 0.001 0.001" />
+        <mesh name="arm_mesh" file="arm.stl" scale="0.001 0.001 0.001" />
+        <mesh name="pendulum_mesh" file="pendulum.stl" scale="0.001 0.001 0.001" />
+
+        <material name="enclosure" rgba="0.25 0.25 0.28 1" />
+        <material name="arm_blue" rgba="0.4 0.6 0.8 1" />
+        <material name="pendulum_red" rgba="0.8 0.4 0.4 1" />
+
+        <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512"
+            height="3072" />
+        <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4"
+            rgb2="0.1 0.2 0.3"
+            markrgb="0.8 0.8 0.8" width="300" height="300" />
+        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5"
+            reflectance="0.2" />
+    </asset>
+
+    <worldbody>
+
+        <light pos="0 0 3.5" dir="0 0 -1" directional="true" />
+        <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="groundplane" />
+
+        <!-- Base (fixed to the world origin) -->
+        <body name="base" pos="0 0 0">
+            <geom type="mesh" mesh="base_mesh" material="enclosure" contype="0" conaffinity="0" />
+
+            <!-- Lid (fixed on top of the base) -->
+            <body name="lid" pos="0 0 0.070">
+                <geom type="mesh" mesh="lid_mesh" material="enclosure" contype="0" conaffinity="0" />
+            </body>
+
+            <!-- Arm (actuated by stepper motor) -->
+            <body name="arm" pos="0 0 0.075" quat="0.70710745 0 0 -0.70710611">
+                <inertial pos="0.041 0 0.011" mass="0.026"
+                    fullinertia="0.00000429 0.00001756 0.0000173 0 -0.00000175 0" />
+                <joint name="base_to_arm" type="hinge" axis="0 0 1"
+                    range="-2.35619449 2.35619449" />
+                <geom type="mesh" mesh="arm_mesh" material="arm_blue" contype="0" conaffinity="0" />
+
+                <!-- Pendulum (swings freely on the arm) -->
+                <body name="pendulum" pos="0.062 0 0.014">
+                    <inertial pos="0 0 -0.051" mass="0.014"
+                        fullinertia="0.00000806 0.00000855 0.00000061 0 0 0.00000019" />
+                    <joint name="arm_to_pendulum" type="hinge" axis="1 0 0" />
+                    <geom type="mesh" mesh="pendulum_mesh" material="pendulum_red"
+                        pos="0 0 0" euler="3.14159265 0 -1.57079633" contype="0" conaffinity="0" />
+                </body>
+            </body>
+        </body>
+
+    </worldbody>
+
+    <actuator>
+        <motor name="base_to_arm_motor" joint="base_to_arm" ctrlrange="-0.4 0.4" gear="1" />
+    </actuator>
+
+</mujoco>

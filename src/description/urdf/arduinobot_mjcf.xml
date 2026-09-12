@@ -22,6 +22,12 @@
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
 
+    <!-- Reach-task target. Free-floating visual marker, no physics/collision.
+         Placed near the gripper's resting workspace (gripper_right sits around
+         x=-0.06, y=0.95, z=1.35 at qpos=0) so it's actually reachable. Nudge
+         this as you observe the arm's real range of motion in the viewer. -->
+    <site name="target" pos="0.1 0.7 1.2" size="0.03" rgba="0 1 0 0.6"/>
+
     <geom pos="-0.5 -0.5 0" quat="1 0 0 0" type="mesh" mesh="basement"/>
     <body name="base_plate" pos="0 0 0.304">
       <inertial pos="0.0374568 0.0391323 0.0686462" quat="-0.263343 0.742225 -0.0620609 0.613107" mass="0.0545311" diaginertia="3.36311e-05 2.67876e-05 2.20813e-05"/>
@@ -40,6 +46,11 @@
             <inertial pos="0.0291372 0.00819303 0.0020982" quat="-0.0891948 0.679743 -0.137753 0.714855" mass="0.00183079" diaginertia="5.62903e-07 5.41871e-07 2.60264e-08"/>
             <joint name="joint_4" pos="0 0 0" axis="0 0 1" range="-1.5708 0" actuatorfrcrange="-30 30"/>
             <geom pos="-0.1 0.5 -0.1" quat="0.707107 0 0 -0.707107" type="mesh" mesh="right_finger"/>
+            <!-- Gripper-tip reference point for the reach task's reward.
+                 Placed at the body origin for now  nudge pos= once you see
+                 in the viewer where the actual fingertip mesh sits relative
+                 to this body's frame. -->
+            <site name="gripper_tip" pos="0 0 0" size="0.015" rgba="1 0 0 1"/>
           </body>
           <body name="gripper_left" pos="-0.22 0.95 -0.1">
             <inertial pos="0.0281243 0.00609915 0.00213881" quat="0.093175 0.679681 0.137481 0.714458" mass="0.00173688" diaginertia="5.22755e-07 5.03338e-07 2.56067e-08"/>

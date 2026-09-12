@@ -46,6 +46,11 @@ class ArduinobotEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         mujoco.mj_resetData(self.model, self.data)
+        target_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "target")
+        new_pos = self.np_random.uniform(
+            low=[0.0, 0.6, 0.8], high=[0.4, 1.0, 1.4]
+        )
+        self.model.site_pos[target_id] = new_pos
         mujoco.mj_forward(self.model, self.data)
         self.steps = 0
 

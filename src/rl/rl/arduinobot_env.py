@@ -26,17 +26,12 @@ class ArduinobotEnv(gym.Env):
         self.success_threshold = success_threshold
         self.steps = 0
 
-        # Action space: 4 actuators (servo_joint_1, servo_joint_2, servo_joint_3, servo_gripper)
-        # Bounds taken from the actuator ctrlrange in the MJCF.
         self.action_space = spaces.Box(
             low=np.array([-1.5708, -1.5708, -1.5708, -1.5708], dtype=np.float32),
             high=np.array([1.5708, 1.5708, 1.5708, 0.0], dtype=np.float32),
             dtype=np.float32,
         )
 
-        # Observation: joint positions + velocities + vector from gripper tip to target.
-        # (5 joints -- joint_5 is mechanically coupled to joint_4 via the
-        # equality constraint, but it still has its own qpos/qvel entry.)
         obs_dim = self.model.nq + self.model.nv + 3
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
@@ -72,7 +67,7 @@ class ArduinobotEnv(gym.Env):
         reward = -distance
         terminated = distance < self.success_threshold
         if terminated:
-            reward += 10.0  # bonus for reaching the target
+            reward += 10.0
         truncated = self.steps >= self.max_steps
 
         obs = self._get_obs()
@@ -94,9 +89,6 @@ class ArduinobotEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    # Quick manual smoke test: random actions, rendered live.
-    # Watch the printed distance -- it should vary as the arm moves, and you
-    # should see the red gripper_tip site and green target site in the viewer.
     env = ArduinobotEnv(render_mode="human")
     obs, info = env.reset()
 

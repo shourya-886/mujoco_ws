@@ -25,7 +25,7 @@ if __name__ == "__main__":
         tensorboard_log="./tb_logs_reach/",
     )
 
-    model.learn(total_timesteps=1_000_000)
+    model.learn(total_timesteps=100_000)
 
     save_path = os.path.expanduser("~/mujoco_ws/ppo_arduinobot_reach")
     model.save(save_path)

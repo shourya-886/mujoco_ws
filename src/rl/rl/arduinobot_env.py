@@ -7,7 +7,6 @@ from gymnasium import spaces
 import mujoco
 import mujoco.viewer
 
-# Absolute path to the MJCF so this works no matter where you run the script from.
 MJCF_PATH = os.path.expanduser(
     "~/mujoco_ws/src/description/urdf/arduinobot_mjcf.xml"
 )
@@ -32,6 +31,7 @@ class ArduinobotEnv(gym.Env):
             dtype=np.float32,
         )
 
+        # qpos + qvel + vector-to-target(3) + distance(1) + explicit encoder block(4)
         obs_dim = self.model.nq + self.model.nv + 3 + 1 + 4
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
@@ -43,9 +43,11 @@ class ArduinobotEnv(gym.Env):
         to_target = target_pos - gripper_pos
         distance = np.array([np.linalg.norm(to_target)], dtype=np.float32)
 
-        # Explicit "encoder" values: each actuated joint's position, normalized
-        # roughly to [-1, 1] by its known range, plus raw qpos/qvel for everything.
-        joint_positions = self.data.qpos[:4].copy()  # joint_1..joint_4 (encoders)
+        # Explicit "encoder" readout: current angle of each actuated joint
+        # (joint_1..joint_4). Redundant with qpos but kept as its own clearly
+        # labeled block -- useful if this ever needs to map directly onto
+        # real servo positions for sim-to-real work later.
+        joint_positions = self.data.qpos[:4].copy()
 
         return np.concatenate([
             self.data.qpos,
@@ -59,26 +61,38 @@ class ArduinobotEnv(gym.Env):
         super().reset(seed=seed)
         mujoco.mj_resetData(self.model, self.data)
 
-        # Guarantee the target is reachable: sample random joint angles within
-        # their real limits, run forward kinematics to see where the gripper
-        # would end up, and place the target there. This is fundamentally more
-        # reliable than picking a Cartesian box, since a 3-DOF serial arm's
-        # workspace is a curved shell, not a box -- a naive box will include
-        # unreachable corners and cripple training.
+        # Guarantee the target is reachable AND above the floor: sample
+        # random joint angles within their real limits, run forward
+        # kinematics, and reject/resample any candidate that lands below the
+        # floor plane (unreachable in practice -- the floor geom blocks it).
         j1_range = self.model.jnt_range[0]
         j2_range = self.model.jnt_range[1]
         j3_range = self.model.jnt_range[2]
 
-        sample_qpos = self.data.qpos.copy()
-        sample_qpos[0] = self.np_random.uniform(j1_range[0], j1_range[1])
-        sample_qpos[1] = self.np_random.uniform(j2_range[0], j2_range[1])
-        sample_qpos[2] = self.np_random.uniform(j3_range[0], j3_range[1])
+        min_z = 0.05  # small margin above the floor plane
+        max_attempts = 50
+        reachable_point = None
+        candidate = None
 
-        self.data.qpos[:] = sample_qpos
-        mujoco.mj_forward(self.model, self.data)
-        reachable_point = self.data.site("gripper_tip").xpos.copy()
+        for _ in range(max_attempts):
+            sample_qpos = self.data.qpos.copy()
+            sample_qpos[0] = self.np_random.uniform(j1_range[0], j1_range[1])
+            sample_qpos[1] = self.np_random.uniform(j2_range[0], j2_range[1])
+            sample_qpos[2] = self.np_random.uniform(j3_range[0], j3_range[1])
 
-        # Now reset properly and place the target at that guaranteed-reachable point.
+            self.data.qpos[:] = sample_qpos
+            mujoco.mj_forward(self.model, self.data)
+            candidate = self.data.site("gripper_tip").xpos.copy()
+
+            if candidate[2] >= min_z:
+                reachable_point = candidate
+                break
+
+        if reachable_point is None:
+            # Extremely unlikely fallback after max_attempts: clamp z upward.
+            reachable_point = candidate.copy()
+            reachable_point[2] = max(reachable_point[2], min_z)
+
         mujoco.mj_resetData(self.model, self.data)
         target_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "target")
         self.model.site_pos[target_id] = reachable_point
@@ -93,6 +107,7 @@ class ArduinobotEnv(gym.Env):
     def step(self, action):
         action = np.clip(action, self.action_space.low, self.action_space.high)
         prev_gripper_pos = self.data.site("gripper_tip").xpos.copy()
+
         self.data.ctrl[:] = action
         mujoco.mj_step(self.model, self.data)
         self.steps += 1
@@ -102,12 +117,14 @@ class ArduinobotEnv(gym.Env):
         distance = float(np.linalg.norm(gripper_pos - target_pos))
         prev_distance = float(np.linalg.norm(prev_gripper_pos - target_pos))
 
-        # Dense shaping: reward reducing distance each step, not just being close.
+        # Dense shaping: reward reducing distance each step (progress), not
+        # just being close overall -- this is the main fix for the arm
+        # struggling to converge with a purely sparse/near-sparse signal.
         progress = prev_distance - distance
         reward = -distance * 0.1 + progress * 10.0
 
         # Small control penalty discourages jittery/wasteful motion.
-        reward -= 0.001 * np.sum(np.square(action))
+        reward -= 0.001 * float(np.sum(np.square(action)))
 
         terminated = distance < self.success_threshold
         if terminated:
@@ -115,6 +132,7 @@ class ArduinobotEnv(gym.Env):
         truncated = self.steps >= self.max_steps
 
         obs = self._get_obs()
+
         if self.render_mode == "human":
             self.render()
 

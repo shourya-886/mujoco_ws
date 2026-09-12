@@ -22,7 +22,14 @@ class FurutaPendulumEnv(gym.Env):
     """
     Gymnasium environment for the MuJoCo Furuta (rotary inverted) pendulum.
 
-    Task: balance the pendulum upright (alpha = 0) by driving the arm motor.
+    Task: balance the pendulum upright.
+
+    The physical MuJoCo pendulum angle is pi at the upright position.
+    Internally, alpha is defined as the wrapped ANGULAR ERROR from upright,
+    so:
+
+        alpha = 0  -> perfectly upright (target)
+        alpha = +/-pi -> hanging down
 
     Observation:
         [sin(theta), cos(theta), sin(alpha), cos(alpha), theta_dot, alpha_dot]
@@ -30,6 +37,12 @@ class FurutaPendulumEnv(gym.Env):
     Action:
         Desired torque/command for the single arm actuator, in the
         actuator's own ctrlrange (matches the MJCF's <motor ctrlrange=.../>).
+
+    Reward:
+        R = -(theta^2
+              + 0.01 * theta_dot^2
+              + 0.001 * alpha^2
+              + 0.00001 * alpha_dot^2)
     """
 
     metadata = {
@@ -41,12 +54,10 @@ class FurutaPendulumEnv(gym.Env):
         self,
         render_mode=None,
         max_steps=1000,
-        upright_threshold=0.17,   # ~10 deg, alpha within this counts as "up"
-        fall_threshold=0.8,       # ~46 deg, alpha beyond this ends the episode
-        control_substeps=10,      # sim steps per env.step() call
-        init_alpha_noise=0.05,    # rad, randomize start near hanging-down
-        velocity_penalty_weight=0.01,
-        action_penalty_weight=0.001,
+        upright_threshold=0.17,
+        fall_threshold=0.8,
+        control_substeps=10,
+        init_alpha_noise=0.05,
     ):
         super().__init__()
 
@@ -58,13 +69,11 @@ class FurutaPendulumEnv(gym.Env):
         self.fall_threshold = fall_threshold
         self.control_substeps = control_substeps
         self.init_alpha_noise = init_alpha_noise
-        self.velocity_penalty_weight = velocity_penalty_weight
-        self.action_penalty_weight = action_penalty_weight
 
         self.steps = 0
 
         # ------------------------------------------------------------
-        # Load MJCF as-is. No injected bodies needed for this task.
+        # Load MJCF as-is.
         # ------------------------------------------------------------
         if not os.path.exists(MJCF_PATH):
             raise FileNotFoundError(f"MJCF file not found:\n{MJCF_PATH}")
@@ -118,10 +127,11 @@ class FurutaPendulumEnv(gym.Env):
         # ------------------------------------------------------------
         # Observation space:
         #   [sin(theta), cos(theta), sin(alpha), cos(alpha), theta_dot, alpha_dot]
+        #
+        # alpha is the angular error from upright.
         # ------------------------------------------------------------
-        obs_dim = 6
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
+            low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32
         )
 
     # ================================================================
@@ -131,7 +141,7 @@ class FurutaPendulumEnv(gym.Env):
     def _get_obs(self):
 
         theta = self.data.qpos[self.arm_qpos_adr]
-        alpha = self.data.qpos[self.pendulum_qpos_adr]
+        alpha = self._get_alpha()
         theta_dot = self.data.qvel[self.arm_qvel_adr]
         alpha_dot = self.data.qvel[self.pendulum_qvel_adr]
 
@@ -150,18 +160,24 @@ class FurutaPendulumEnv(gym.Env):
         return observation
 
     def _get_alpha(self):
-        # Wrapped to [-pi, pi]. NOTE: alpha == 0 here means hanging DOWN
-        # (the stable equilibrium), not upright. Use
-        # _get_upright_distance() below for "how far from balanced".
-        raw_alpha = self.data.qpos[self.pendulum_qpos_adr]
-        return float(
-            (raw_alpha + np.pi) % (2 * np.pi) - np.pi
-        )
+        """
+        Return pendulum angular error from the upright target.
 
-    def _get_upright_distance(self, alpha):
-        # Angular distance from upright (+/- pi), wrapped to [0, pi].
-        # 0 = perfectly upright, pi = hanging straight down.
-        return float(np.pi - abs(alpha))
+        MuJoCo physical angle:
+            pi  -> upright
+            0   -> hanging down
+
+        Internal alpha:
+            0   -> upright target
+            +/-pi -> hanging down
+        """
+        raw_alpha = self.data.qpos[self.pendulum_qpos_adr]
+
+        # Shift the physical angle by pi so that upright becomes zero,
+        # then wrap the result to [-pi, pi].
+        return float(
+            (raw_alpha - np.pi + np.pi) % (2 * np.pi) - np.pi
+        )
 
     # ================================================================
     # RESET
@@ -177,12 +193,8 @@ class FurutaPendulumEnv(gym.Env):
         self.data.qpos[self.arm_qpos_adr] = 0.0
         self.data.qvel[self.arm_qvel_adr] = 0.0
 
-        # Pendulum starts near upright (alpha = +/- pi is upright, alpha = 0
-        # is the hanging-down stable equilibrium — confirmed by testing:
-        # zero action holds the pendulum steady at alpha = 0, which is
-        # only possible if that's the stable/hanging point, not upright).
-        # Small random perturbation so the policy doesn't overfit to one
-        # exact starting state.
+        # Physical pendulum starts near upright (physical angle = pi).
+        # The internal alpha error therefore starts near zero.
         self.data.qpos[self.pendulum_qpos_adr] = (
             np.pi + self.np_random.uniform(
                 -self.init_alpha_noise, self.init_alpha_noise
@@ -235,62 +247,42 @@ class FurutaPendulumEnv(gym.Env):
         alpha_dot = float(self.data.qvel[self.pendulum_qvel_adr])
 
         # ------------------------------------------------------------
-        # Reward
+        # REWARD
         #
-        # 1. Upright reward: peaks at alpha = 0, standard cos-based shaping.
-        # 2. Velocity penalty: discourages wild spinning at the top.
-        # 3. Action penalty: discourages unnecessary torque.
-        # 4. Arm-limit penalty: discourages hugging the mechanical stops.
+        # Exactly:
+        #
+        # R = -(theta^2
+        #       + 0.01 * theta_dot^2
+        #       + 0.001 * alpha^2
+        #       + 0.00001 * alpha_dot^2)
+        #
+        # theta = arm rotation
+        # alpha = pendulum angular error from upright
+        #
+        # Therefore alpha = 0 is the target upright position.
         # ------------------------------------------------------------
-        # Confirmed by testing: alpha = 0 is the pendulum's stable
-        # hanging-down equilibrium (zero action holds steady there).
-        # Upright (unstable equilibrium) is therefore alpha = +/- pi.
-        # -cos(alpha) peaks at alpha = +/-pi (upright) and is at its
-        # minimum at alpha = 0 (hanging), which is what we want to reward.
-        upright_reward = -np.cos(alpha)  # +1 at top (pi), -1 at bottom (0)
-
-        velocity_penalty = self.velocity_penalty_weight * (
-            theta_dot ** 2 + alpha_dot ** 2
-        )
-
-        normalized_action = action[0] / (
-            self.action_space.high[0] + 1e-8
-        )
-        action_penalty = self.action_penalty_weight * (normalized_action ** 2)
-
-        arm_limit_margin = min(
-            theta - self.arm_joint_range[0],
-            self.arm_joint_range[1] - theta,
-        )
-        arm_limit_penalty = 0.0
-        if arm_limit_margin < 0.2:  # ~11 deg from a hard stop
-            arm_limit_penalty = 2.0 * (0.2 - arm_limit_margin)
-
-        reward = (
-            upright_reward
-            - velocity_penalty
-            - action_penalty
-            - arm_limit_penalty
+        reward = -(
+            theta ** 2
+            + 0.01 * theta_dot ** 2
+            + 0.001 * alpha ** 2
+            + 0.00001 * alpha_dot ** 2
         )
 
         # ------------------------------------------------------------
         # Termination.
         #
-        # "Fallen" means too far from upright (+/- pi), NOT too far from
-        # zero — alpha = 0 is the hanging-down equilibrium, not a fall.
+        # alpha = 0 is upright.
+        # The episode ends when the pendulum is farther than
+        # fall_threshold from upright or the arm reaches a limit.
         # ------------------------------------------------------------
-        upright_distance = self._get_upright_distance(alpha)
-        fell_over = upright_distance > self.fall_threshold
+        fell_over = abs(alpha) > self.fall_threshold
+
         hit_arm_limit = (
             theta <= self.arm_joint_range[0]
             or theta >= self.arm_joint_range[1]
         )
 
         terminated = bool(fell_over or hit_arm_limit)
-
-        if terminated:
-            reward -= 10.0
-
         truncated = self.steps >= self.max_steps
 
         observation = self._get_obs()
@@ -300,7 +292,7 @@ class FurutaPendulumEnv(gym.Env):
             "theta": theta,
             "theta_dot": theta_dot,
             "alpha_dot": alpha_dot,
-            "upright": upright_distance < self.upright_threshold,
+            "upright": abs(alpha) < self.upright_threshold,
             "fell_over": fell_over,
             "hit_arm_limit": hit_arm_limit,
             "steps": self.steps,
@@ -348,7 +340,8 @@ if __name__ == "__main__":
     print("=" * 60)
     print(f"Action shape: {env.action_space.shape}")
     print(f"Observation shape: {env.observation_space.shape}")
-    print(f"Initial alpha: {info['alpha']:.4f} rad")
+    print(f"Initial alpha error: {info['alpha']:.4f} rad")
+    print("Target alpha: 0.0000 rad (upright)")
     print("=" * 60)
 
     try:
@@ -359,12 +352,7 @@ if __name__ == "__main__":
 
             for step in range(env.max_steps):
 
-                # Zero action sanity check: with no torque, the pendulum
-                # starts at rest near upright and should stay there for a
-                # while (small numerical drift aside). If it falls
-                # immediately even with zero action, something is wrong
-                # with the env itself. Switch to env.action_space.sample()
-                # to see how fast a random policy fails (expected: fast).
+                # Zero-action sanity check.
                 action = np.zeros(env.action_space.shape, dtype=np.float32)
 
                 observation, reward, terminated, truncated, info = env.step(action)
@@ -372,7 +360,7 @@ if __name__ == "__main__":
                 if step % 50 == 0:
                     print(
                         f"Step {step:03d} | "
-                        f"alpha: {info['alpha']:.3f} rad | "
+                        f"alpha error: {info['alpha']:.3f} rad | "
                         f"reward: {reward:.3f}"
                     )
 

@@ -52,7 +52,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
-                <mesh filename="package://meshes/base.stl" scale="0.001 0.001 0.001" />
+                <mesh filename="/home/shourya/mujoco_ws/src/description/meshes/base.stl" scale="0.001 0.001 0.001" />
             </geometry>
             <material name="enclosure" />
         </visual>
@@ -64,7 +64,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
-                <mesh filename="package://meshes/lid.stl" scale="0.001 0.001 0.001" />
+                <mesh filename="/home/shourya/mujoco_ws/src/description/meshes/lid.stl" scale="0.001 0.001 0.001" />
             </geometry>
             <material name="enclosure" />
         </visual>
@@ -95,7 +95,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
-                <mesh filename="package://meshes/arm.stl" scale="0.001 0.001 0.001" />
+                <mesh filename="/home/shourya/mujoco_ws/src/description/meshes/arm.stl" scale="0.001 0.001 0.001" />
             </geometry>
             <material name="arm_blue" />
         </visual>
@@ -138,7 +138,7 @@
                  9.5 mm could not otherwise reach the arm's bearing pocket. -->
             <origin xyz="0 0 0" rpy="3.14159265 0 -1.57079633" />
             <geometry>
-                <mesh filename="package://meshes/pendulum.stl" scale="0.001 0.001 0.001" />
+                <mesh filename="/home/shourya/mujoco_ws/src/description/meshes/pendulum.stl" scale="0.001 0.001 0.001" />
             </geometry>
             <material name="pendulum_red" />
         </visual>
